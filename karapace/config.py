@@ -50,6 +50,7 @@ DEFAULTS = {
     "rest_authorization": False,
     "log_level": "DEBUG",
     "log_format": "%(name)-20s\t%(threadName)s\t%(levelname)-8s\t%(message)s",
+    "log_state": None,  # values are "when_ready" or None
     "master_eligibility": True,
     "replication_factor": 1,
     "security_protocol": "PLAINTEXT",

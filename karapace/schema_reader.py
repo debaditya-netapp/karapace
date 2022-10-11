@@ -15,11 +15,12 @@ from karapace.key_format import is_key_in_canonical_format, KeyFormatter, KeyMod
 from karapace.master_coordinator import MasterCoordinator
 from karapace.schema_models import SchemaType, TypedSchema, ValidatedTypedSchema
 from karapace.statsd import StatsClient
-from karapace.typing import SubjectData
+from karapace.typing import JsonData, SubjectData
 from karapace.utils import KarapaceKafkaClient
 from threading import Condition, Event, Lock, Thread
 from typing import Any, Dict, Optional
 
+import hashlib
 import json
 import logging
 
@@ -259,6 +260,7 @@ class KafkaSchemaReader(Thread):
         raw_msgs = self.consumer.poll(timeout_ms=self.timeout_ms)
         if self.ready is False and not raw_msgs:
             self.ready = True
+            self.log_state()
         watch_offsets = False
         if self.master_coordinator is not None:
             are_we_master, _ = self.master_coordinator.get_master_info()
@@ -532,3 +534,36 @@ class KafkaSchemaReader(Thread):
                 selected_schemas = [schema for schema in selected_schemas if schema.get("deleted", False) is False]
             res_schemas[subject] = selected_schemas
         return res_schemas
+
+    def _build_state_dict(self) -> JsonData:
+        state = {"schemas": [], "subjects": {}}
+        for schema_id, schema in self.schemas.items():
+            schema_str = schema.normalize_schema_str()
+            schema_hash = hashlib.sha1(schema_str.encode("utf8")).hexdigest()
+            state["schemas"].append(
+                {
+                    "id": schema_id,
+                    "schema_hash": schema_hash,
+                }
+            )
+        for subject, subject_data in self.subjects.items():
+            subject_state = []
+            state["subjects"][subject] = subject_state
+            for _, schema in subject_data.get("schemas", {}).items():
+                schema_id = schema.get("id")
+                version = schema.get("version")
+                schema_str = schema.get("schema").normalize_schema_str()
+                schema_hash = hashlib.sha1(schema_str.encode("utf8")).hexdigest()
+                subject_state.append(
+                    {
+                        "id": schema_id,
+                        "version": version,
+                        "schema_hash": schema_hash,
+                    }
+                )
+        return json.dumps(state, sort_keys=True)
+
+    def log_state(self) -> None:
+        if self.config.get("log_state", None) == "when_ready":
+            state_str = self._build_state_dict()
+            LOG.log(level=constants.LOGGING_STATUS_LEVEL, msg=state_str)
