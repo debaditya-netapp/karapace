@@ -10,9 +10,28 @@ You need Python 3.8+. Install the dependencies with ``pip``::
 
     pip install -r requirements.txt
 
+For building the stylesheets, you need ``node`` and ``npm``. Install the dependencies with ``npm``::
+
+    npm install
+
+After that, the Tailwind CSS assets can be build with::
+
+    make tailwind-build
+
+or to continuously watch for changes and automatically build them::
+
+    make tailwind-watch
+
 Build the site::
 
     make html
 
-The website can be found at: ``build/html``.
+Watch for changes and automatically build the site::
 
+    make livehtml
+
+Watch for all changes, this is recommended for local development when developing with style changes::
+
+    make livehtmlall
+
+The website can be found at: ``build/html``.

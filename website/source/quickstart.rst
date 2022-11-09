@@ -79,7 +79,7 @@ Change compatibility requirement to FULL for the test-key subject::
   {"compatibility":"FULL"}
 
 
-REST API 
+REST API
 ---------
 
 List topics::
@@ -121,4 +121,3 @@ Delete consumer::
 
   $ curl -X DELETE -H "Accept: application/vnd.kafka.v2+json" \
     $KARAPACE_REST_URI/consumers/avro_consumers/instances/my_consumer
-
