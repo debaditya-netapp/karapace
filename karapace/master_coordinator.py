@@ -36,6 +36,7 @@ class SchemaCoordinator(BaseCoordinator):
     are_we_master = None
     master_url = None
     master_eligibility = True
+    schema_reader_ready: bool = False
 
     def protocol_type(self):
         return "sr"
@@ -48,6 +49,7 @@ class SchemaCoordinator(BaseCoordinator):
             "port": port,
             "scheme": scheme,
             "master_eligibility": self.master_eligibility,
+            "ready": self.schema_reader_ready,
         }
         if json_encode:
             return json.dumps(res)
@@ -60,12 +62,22 @@ class SchemaCoordinator(BaseCoordinator):
         LOG.info("Creating assignment: %r, protocol: %r, members: %r", leader_id, protocol, members)
         self.are_we_master = None
         error = NO_ERROR
-        urls = {}
+        master_eligible_ready_urls = {}
+        master_eligible_not_ready_urls = {}
         fallback_urls = {}
         for member_id, member_data in members:
             member_identity = json.loads(member_data.decode("utf8"))
-            if member_identity["master_eligibility"] is True:
-                urls[get_identity_url(member_identity["scheme"], member_identity["host"], member_identity["port"])] = (
+            if member_identity["master_eligibility"] is True and member_identity.get("ready", False) is True:
+                master_eligible_ready_urls[
+                    get_identity_url(member_identity["scheme"], member_identity["host"], member_identity["port"])
+                ] = (
+                    member_id,
+                    member_data,
+                )
+            elif member_identity["master_eligibility"] is True:
+                master_eligible_not_ready_urls[
+                    get_identity_url(member_identity["scheme"], member_identity["host"], member_identity["port"])
+                ] = (
                     member_id,
                     member_data,
                 )
@@ -73,9 +85,13 @@ class SchemaCoordinator(BaseCoordinator):
                 fallback_urls[
                     get_identity_url(member_identity["scheme"], member_identity["host"], member_identity["port"])
                 ] = (member_id, member_data)
-        if len(urls) > 0:
-            chosen_url = sorted(urls, reverse=self.election_strategy.lower() == "highest")[0]
-            schema_master_id, member_data = urls[chosen_url]
+
+        if len(master_eligible_ready_urls) > 0:
+            chosen_url = sorted(master_eligible_ready_urls, reverse=self.election_strategy.lower() == "highest")[0]
+            schema_master_id, member_data = master_eligible_ready_urls[chosen_url]
+        elif len(master_eligible_not_ready_urls) > 0:
+            chosen_url = sorted(master_eligible_not_ready_urls, reverse=self.election_strategy.lower() == "highest")[0]
+            schema_master_id, member_data = master_eligible_not_ready_urls[chosen_url]
         else:
             # Protocol guarantees there is at least one member thus if urls is empty, fallback_urls cannot be
             chosen_url = sorted(fallback_urls, reverse=self.election_strategy.lower() == "highest")[0]
@@ -191,6 +207,9 @@ class MasterCoordinator(Thread):
     def close(self):
         LOG.info("Closing master_coordinator")
         self.running = False
+
+    def ready(self, ready: bool):
+        self.sc.schema_reader_ready = ready
 
     def run(self):
         _hb_interval = 3.0
