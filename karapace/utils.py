@@ -172,9 +172,13 @@ class KarapaceKafkaClient(KafkaClient):
         thus ensuring we do not end up in a stale metadata loop
         """
         ttl = self.cluster.ttl()
+        LOG.debug("TTL is %s", ttl)
         wait_for_in_progress_ms = self.config["request_timeout_ms"] if self._metadata_refresh_in_progress else 0
+        LOG.debug("_metadata_refresh_in_progress is %s", self._metadata_refresh_in_progress)
+        LOG.debug("request_timeout_ms is %s", self.config["request_timeout_ms"])
+        LOG.debug("wait_for_in_progress_ms is %s", wait_for_in_progress_ms)
         metadata_timeout = max(ttl, wait_for_in_progress_ms)
-
+        LOG.debug("metadata_timeout is %s", metadata_timeout)
         if metadata_timeout > 0:
             return metadata_timeout
         # pylint: disable=protected-access
@@ -188,6 +192,7 @@ class KarapaceKafkaClient(KafkaClient):
             LOG.debug("Give up sending metadata request since no node is available")
             return self.config["reconnect_backoff_ms"]
 
+        LOG.debug("Selected Node is %s", node_id)
         if self._can_send_request(node_id):
             topics = list(self._topics)
             if not topics and self.cluster.is_bootstrap(node_id):
@@ -218,6 +223,7 @@ class KarapaceKafkaClient(KafkaClient):
 
         if self.maybe_connect(node_id, wakeup=wakeup):
             LOG.debug("Initializing connection to node %s for metadata request", node_id)
+            LOG.debug("reconnect_backoff_ms is ", self.config["reconnect_backoff_ms"])
             return self.config["reconnect_backoff_ms"]
         return float("inf")
 
