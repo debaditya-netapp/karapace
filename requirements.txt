@@ -17,7 +17,7 @@ avro==1.11.0
 # - The contents of the file change, which invalidates the existing docker
 #   images and forces a new image generation.
 #
-git+https://github.com/aiven/kafka-python.git@fb5a931bb9dd819783b845413dd5eea6ed045801
+git+https://github.com/debaditya-netapp/kafka-python.git@fb5a931bb9dd819783b845413dd5eea6ed045801
 
 # Indirect dependencies
 aiohttp==3.8.1
