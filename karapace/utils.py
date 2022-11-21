@@ -223,7 +223,7 @@ class KarapaceKafkaClient(KafkaClient):
 
         if self.maybe_connect(node_id, wakeup=wakeup):
             LOG.debug("Initializing connection to node %s for metadata request", node_id)
-            LOG.debug("reconnect_backoff_ms is ", self.config["reconnect_backoff_ms"])
+            LOG.debug("reconnect_backoff_ms is %s", self.config["reconnect_backoff_ms"])
             return self.config["reconnect_backoff_ms"]
         return float("inf")
 
